@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort
+
+      - name: Check code formatting with Black
+        run: |
+          black --check --diff .
+
+      - name: Check import sorting with isort
+        run: |
+          isort --check-only --diff .
+
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest nbformat nbconvert
+
+      - name: Verify package imports
+        run: |
+          python -c "import numpy; print(f'NumPy: {numpy.__version__}')"
+          python -c "import pandas; print(f'Pandas: {pandas.__version__}')"
+          python -c "import matplotlib; print(f'Matplotlib: {matplotlib.__version__}')"
+          python -c "import sklearn; print(f'scikit-learn: {sklearn.__version__}')"
+          python -c "import pulp; print(f'PuLP: {pulp.__version__}')"
+
+      - name: Validate notebooks
+        run: |
+          python -c "
+          import nbformat
+          import os
+          for nb_file in ['notebook/01_create_sample_data.ipynb', 'notebook/02_linear_regression.ipynb']:
+              if os.path.exists(nb_file):
+                  with open(nb_file, 'r', encoding='utf-8') as f:
+                      nb = nbformat.read(f, as_version=4)
+                  print(f'✓ {nb_file} is valid')
+          "
+
+  notebook-execution:
+    name: Execute Notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install nbconvert ipykernel
+
+      - name: Install Jupyter kernel
+        run: |
+          python -m ipykernel install --user --name python3
+
+      - name: Execute notebook - Create Sample Data
+        run: |
+          jupyter nbconvert --to notebook --execute notebook/01_create_sample_data.ipynb --output executed_01.ipynb
+
+      - name: Execute notebook - Linear Regression
+        run: |
+          jupyter nbconvert --to notebook --execute notebook/02_linear_regression.ipynb --output executed_02.ipynb
+
+      - name: Verify generated data files
+        run: |
+          ls -la data/
+          test -f data/simple_linear_data.csv && echo "✓ simple_linear_data.csv exists"
+          test -f data/multi_linear_data.csv && echo "✓ multi_linear_data.csv exists"
+

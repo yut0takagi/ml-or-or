@@ -1,0 +1,37 @@
+[tool.black]
+line-length = 127
+target-version = ['py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # defaults
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | \.ipynb_checkpoints
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 127
+skip = [".gitignore", ".dockerignore", ".venv", ".ipynb_checkpoints"]
+skip_glob = ["**/migrations/*"]
+
+[tool.flake8]
+max-line-length = 127
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", ".venv", "build", "dist", ".ipynb_checkpoints"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short"
+
