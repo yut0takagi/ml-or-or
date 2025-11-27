@@ -1,4 +1,4 @@
-## MachineLearning か Operations Reserachか
+## MachineLearning か Operations Researchか
 > 本プロジェクトでは、機械学習を数理最適化で実装することでアルゴリズムの性質を可視化することを目的としています。
 
 ### 利用するデータについて
